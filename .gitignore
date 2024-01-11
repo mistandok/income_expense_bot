@@ -19,5 +19,7 @@
 
 .idea/
 
+.env
+
 # Go workspace file
 go.work

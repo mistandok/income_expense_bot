@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
+	"income_expense_bot/internal/clients/telegram"
+	"income_expense_bot/internal/lib"
 	"log"
 	"os"
 	"strconv"
@@ -19,12 +22,38 @@ func main() {
 	consumeBatchSize := mustFetchConsumeUpdatesBatchSize(envs)
 	logLevel := mustFetchLogLevel(envs)
 
+	ctx := context.Background()
 	logger := setupZeroLog(logLevel, time.RFC3339)
 
 	logger.Info().
 		Str("tg_token", tgBotToken).
 		Int("batch_size", consumeBatchSize).
 		Msg("прочитали переменные окружения")
+
+	outgoingMessage := telegram.OutgoingMessage{
+		ChatId: 88700971,
+		Text:   "add income",
+		ReplyMarkup: telegram.InlineKeyboardMarkup{
+			InlineKeyboard: [][]telegram.InlineKeyboardButton{
+				{
+					telegram.InlineKeyboardButton{
+						Text:         "❌ delete",
+						CallbackData: lib.Pointer("delete callback data"),
+					},
+					telegram.InlineKeyboardButton{
+						Text:         "🔄 update",
+						CallbackData: lib.Pointer("delete callback data"),
+					},
+				},
+			},
+		},
+	}
+
+	tgClient := telegram.New("api.telegram.org", tgBotToken)
+	err = tgClient.SendMessage(ctx, outgoingMessage)
+	if err != nil {
+		logger.Fatal().Msg(fmt.Sprintf("fatal error %+w", err))
+	}
 
 }
 

@@ -11,10 +11,22 @@ type Update struct {
 	CallbackQuery *CallbackQuery   `json:"callback_query"`
 }
 
+type SendMessageResponse struct {
+	Ok          bool    `json:"ok"`
+	ErrorCode   *int    `json:"error_code,omitempty"`
+	Description *string `json:"description,omitempty"`
+}
+
 type IncomingMessage struct {
 	Text string `json:"text"`
 	From From   `json:"from"`
 	Chat Chat   `json:"chat"`
+}
+
+type OutgoingMessage struct {
+	ChatId      int    `json:"chat_id"`
+	Text        string `json:"text"`
+	ReplyMarkup any    `json:"reply_markup"` // Доступны типы InlineKeyboardMarkup, ReplyKeyboardMarkup
 }
 
 type From struct {
@@ -33,10 +45,19 @@ type CallbackQuery struct {
 }
 
 type InlineKeyboardMarkup struct {
-	InlineKeyboard []InlineKeyboardButton `json:"inline_keyboard"`
+	InlineKeyboard [][]InlineKeyboardButton `json:"inline_keyboard"`
 }
 
 type InlineKeyboardButton struct {
 	Text         string  `json:"text"`
-	CallbackData *string `json:"callback_data"`
+	CallbackData *string `json:"callback_data,omitempty"`
+}
+
+type ReplyKeyboardMarkup struct {
+	Keyboard       [][]KeyboardButton `json:"keyboard"`
+	ResizeKeyboard *bool              `json:"resize_keyboard,omitempty"`
+}
+
+type KeyboardButton struct {
+	Text string `json:"text"`
 }

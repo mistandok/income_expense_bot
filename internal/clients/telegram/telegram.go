@@ -3,6 +3,8 @@ package telegram
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"income_expense_bot/internal/lib/e"
 	"io"
 	"net/http"
@@ -50,14 +52,25 @@ func (c *Client) Updates(ctx context.Context, offset int, limit int) ([]Update, 
 	return res.Result, nil
 }
 
-func (c *Client) SendMessage(ctx context.Context, chatID int, text string) error {
-	q := url.Values{}
-	q.Add("chat_id", strconv.Itoa(chatID))
-	q.Add("text", text)
-
-	_, err := c.doRequest(ctx, sendMessageMethod, q, 2*time.Second)
+func (c *Client) SendMessage(ctx context.Context, outgoingMessage OutgoingMessage) error {
+	q, err := outgoingMessage.AsUrlValues()
 	if err != nil {
 		return e.Wrap("can't send message", err)
+	}
+
+	res, err := c.doRequest(ctx, sendMessageMethod, *q, 2*time.Second)
+	if err != nil {
+		return e.Wrap("can't send message", err)
+	}
+
+	var response SendMessageResponse
+	err = json.Unmarshal(res, &response)
+	if err != nil {
+		return e.Wrap("can't send message", err)
+	}
+
+	if !response.Ok {
+		return errors.New(fmt.Sprintf("can't send message %v", response.Description))
 	}
 
 	return nil

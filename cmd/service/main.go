@@ -6,7 +6,9 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 	"income_expense_bot/internal/clients/telegram"
-	"income_expense_bot/internal/lib"
+	event_consumer "income_expense_bot/internal/consumer/event-consumer"
+	telegram_worker "income_expense_bot/internal/events/telegram"
+	"income_expense_bot/internal/lib/e"
 	"log"
 	"os"
 	"strconv"
@@ -19,51 +21,32 @@ func main() {
 		log.Fatal("не удалось прочитать переменные окружения")
 	}
 	tgBotToken := mustFetchTgBotToken(envs)
+	tgBotHost := mustFetchTgBotHost(envs)
 	consumeBatchSize := mustFetchConsumeUpdatesBatchSize(envs)
 	logLevel := mustFetchLogLevel(envs)
 
+	// инициализируем все объекты, необходимые для работы
 	ctx := context.Background()
 	logger := setupZeroLog(logLevel, time.RFC3339)
+	tgClient := telegram.New(tgBotHost, tgBotToken)
+	worker := telegram_worker.New(logger, tgClient)
+	consumer := event_consumer.New(logger, worker, worker, consumeBatchSize)
 
-	logger.Info().
-		Str("tg_token", tgBotToken).
-		Int("batch_size", consumeBatchSize).
-		Msg("прочитали переменные окружения")
-
-	outgoingMessage := telegram.OutgoingMessage{
-		ChatId: 88700971,
-		Text:   "add income",
-		ReplyMarkup: telegram.InlineKeyboardMarkup{
-			InlineKeyboard: [][]telegram.InlineKeyboardButton{
-				{
-					telegram.InlineKeyboardButton{
-						Text:         "❌ delete",
-						CallbackData: lib.Pointer("delete callback data"),
-					},
-					telegram.InlineKeyboardButton{
-						Text:         "🔄 update",
-						CallbackData: lib.Pointer("delete callback data"),
-					},
-				},
-			},
-		},
-	}
-
-	tgClient := telegram.New("api.telegram.org", tgBotToken)
-	err = tgClient.SendMessage(ctx, outgoingMessage)
-	if err != nil {
-		logger.Fatal().Msg(fmt.Sprintf("fatal error %+w", err))
+	// стартуем бота
+	logger.Info().Msg("service started")
+	if err := consumer.Start(ctx); err != nil {
+		logger.Fatal().Err(e.Wrap("service is stopped", err))
 	}
 
 }
 
-func setupZeroLog(logLevel zerolog.Level, timeFormat string) zerolog.Logger {
+func setupZeroLog(logLevel zerolog.Level, timeFormat string) *zerolog.Logger {
 	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}
 	logger := zerolog.New(output).With().Timestamp().Logger()
 	zerolog.SetGlobalLevel(logLevel)
 	zerolog.TimeFieldFormat = time.RFC3339
 
-	return logger
+	return &logger
 }
 
 func mustFetchLogLevel(envs map[string]string) zerolog.Level {
@@ -86,6 +69,15 @@ func mustFetchTgBotToken(envs map[string]string) string {
 		log.Fatal(fmt.Sprintf("не задан %s", name))
 	}
 	return tgBotToken
+}
+
+func mustFetchTgBotHost(envs map[string]string) string {
+	name := "TG_BOT_HOST"
+	tgBotHost, ok := envs[name]
+	if !ok {
+		log.Fatal(fmt.Sprintf("не задан %s", name))
+	}
+	return tgBotHost
 }
 
 func mustFetchConsumeUpdatesBatchSize(envs map[string]string) int {

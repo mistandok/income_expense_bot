@@ -21,8 +21,9 @@ type Client struct {
 }
 
 const (
-	getUpdatesMethod  = "getUpdates"
-	sendMessageMethod = "sendMessage"
+	getUpdatesMethod    = "getUpdates"
+	sendMessageMethod   = "sendMessage"
+	answerCallbackQuery = "answerCallbackQuery"
 )
 
 func New(host string, token string) *Client {
@@ -63,14 +64,38 @@ func (c *Client) SendMessage(ctx context.Context, outgoingMessage OutgoingMessag
 		return e.Wrap("can't send message", err)
 	}
 
-	var response SendMessageResponse
+	var response TelegramResponse
 	err = json.Unmarshal(res, &response)
 	if err != nil {
 		return e.Wrap("can't send message", err)
 	}
 
 	if !response.Ok {
-		return errors.New(fmt.Sprintf("can't send message %v", response.Description))
+		return errors.New(fmt.Sprintf("can't send message %v", *response.Description))
+	}
+
+	return nil
+}
+
+func (c *Client) AnswerCallbackQuery(ctx context.Context, callbackQueryID string) error {
+	q := make(url.Values)
+	q.Add("callback_query_id", callbackQueryID)
+	q.Add("text", "lalala callback was processed")
+	q.Add("show_alert", "true")
+
+	res, err := c.doRequest(ctx, answerCallbackQuery, q, 2*time.Second)
+	if err != nil {
+		return e.Wrap("can't answer on callback query", err)
+	}
+
+	var response TelegramResponse
+	err = json.Unmarshal(res, &response)
+	if err != nil {
+		return e.Wrap("can't answer on callback query", err)
+	}
+
+	if !response.Ok {
+		return errors.New(fmt.Sprintf("can't answer on callback query %v", *response.Description))
 	}
 
 	return nil

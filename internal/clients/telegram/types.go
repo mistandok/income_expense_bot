@@ -11,7 +11,7 @@ type Update struct {
 	CallbackQuery *CallbackQuery   `json:"callback_query"`
 }
 
-type SendMessageResponse struct {
+type TelegramResponse struct {
 	Ok          bool    `json:"ok"`
 	ErrorCode   *int    `json:"error_code,omitempty"`
 	Description *string `json:"description,omitempty"`

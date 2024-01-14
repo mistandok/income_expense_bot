@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"income_expense_bot/internal/lib"
 	"income_expense_bot/internal/lib/e"
 	"io"
 	"net/http"
@@ -39,7 +40,7 @@ func (c *Client) Updates(ctx context.Context, offset int, limit int) ([]Update, 
 	q.Add("offset", strconv.Itoa(offset))
 	q.Add("limit", strconv.Itoa(limit))
 
-	data, err := c.doRequest(ctx, getUpdatesMethod, q, 2*time.Second)
+	data, err := c.doRequest(ctx, getUpdatesMethod, q, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +60,7 @@ func (c *Client) SendMessage(ctx context.Context, outgoingMessage OutgoingMessag
 		return e.Wrap("can't send message", err)
 	}
 
-	res, err := c.doRequest(ctx, sendMessageMethod, *q, 2*time.Second)
+	res, err := c.doRequest(ctx, sendMessageMethod, *q, lib.Pointer(2*time.Second))
 	if err != nil {
 		return e.Wrap("can't send message", err)
 	}
@@ -77,31 +78,37 @@ func (c *Client) SendMessage(ctx context.Context, outgoingMessage OutgoingMessag
 	return nil
 }
 
-func (c *Client) AnswerCallbackQuery(ctx context.Context, callbackQueryID string) error {
-	q := make(url.Values)
-	q.Add("callback_query_id", callbackQueryID)
-	q.Add("text", "lalala callback was processed")
-	q.Add("show_alert", "true")
+func (c *Client) AnswerCallbackQuery(ctx context.Context, callbackMessage OutgoingCallbackMessage) (err error) {
+	defer func() {
+		if err != nil {
+			err = e.Wrap("can't answer on callback query", err)
+		}
+	}()
 
-	res, err := c.doRequest(ctx, answerCallbackQuery, q, 2*time.Second)
+	q, err := callbackMessage.AsUrlValues()
 	if err != nil {
-		return e.Wrap("can't answer on callback query", err)
+		return err
+	}
+
+	res, err := c.doRequest(ctx, answerCallbackQuery, *q, lib.Pointer(2*time.Second))
+	if err != nil {
+		return err
 	}
 
 	var response TelegramResponse
 	err = json.Unmarshal(res, &response)
 	if err != nil {
-		return e.Wrap("can't answer on callback query", err)
+		return err
 	}
 
 	if !response.Ok {
-		return errors.New(fmt.Sprintf("can't answer on callback query %v", *response.Description))
+		return errors.New(*response.Description)
 	}
 
 	return nil
 }
 
-func (c *Client) doRequest(ctx context.Context, method string, query url.Values, timeout time.Duration) (data []byte, err error) {
+func (c *Client) doRequest(ctx context.Context, method string, query url.Values, timeout *time.Duration) (data []byte, err error) {
 	defer func() {
 		err = e.WrapIfErr("can't do request: %w", err)
 	}()
@@ -117,8 +124,11 @@ func (c *Client) doRequest(ctx context.Context, method string, query url.Values,
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	if timeout != nil {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, *timeout)
+		defer cancel()
+	}
 
 	req = req.WithContext(ctx)
 

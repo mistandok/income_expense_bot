@@ -23,12 +23,6 @@ type IncomingMessage struct {
 	Chat Chat   `json:"chat"`
 }
 
-type OutgoingMessage struct {
-	ChatId      int    `json:"chat_id"`
-	Text        string `json:"text"`
-	ReplyMarkup any    `json:"reply_markup"` // Доступны типы InlineKeyboardMarkup, ReplyKeyboardMarkup
-}
-
 type From struct {
 	Username string `json:"username"`
 }
@@ -42,6 +36,12 @@ type CallbackQuery struct {
 	From    From             `json:"user"`
 	Message *IncomingMessage `json:"message"`
 	Data    *string          `json:"data"`
+}
+
+type OutgoingMessage struct {
+	ChatId      int    `json:"chat_id"`
+	Text        string `json:"text"`
+	ReplyMarkup any    `json:"reply_markup"` // Доступны типы InlineKeyboardMarkup, ReplyKeyboardMarkup
 }
 
 type InlineKeyboardMarkup struct {
@@ -60,4 +60,10 @@ type ReplyKeyboardMarkup struct {
 
 type KeyboardButton struct {
 	Text string `json:"text"`
+}
+
+type OutgoingCallbackMessage struct {
+	CallbackQueryId string  `json:"callback_query_id"`
+	Text            *string `json:"text,omitempty"`
+	ShowAlert       *bool   `json:"show_alert,omitempty"`
 }

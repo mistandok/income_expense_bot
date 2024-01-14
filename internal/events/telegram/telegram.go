@@ -19,9 +19,14 @@ type Worker struct {
 }
 
 type Meta struct {
-	ChatID     int
-	Username   string
-	CallbackID *string
+	ChatID       int
+	Username     string
+	CallbackInfo *CallbackInfo
+}
+
+type CallbackInfo struct {
+	ID   string
+	Data *string
 }
 
 var (
@@ -59,28 +64,34 @@ func (w *Worker) Process(ctx context.Context, event events.Event) error {
 	case events.Message:
 		return w.processMessage(ctx, event)
 	case events.Callback:
-		meta, err := meta(event)
-		if err != nil {
-			return e.Wrap("can't process message", err)
-		}
-		return w.tgClient.AnswerCallbackQuery(ctx, *meta.CallbackID)
+		return w.processCallback(ctx, event)
 	default:
 		return e.Wrap("can't process message", ErrUnknownEvent)
 	}
 }
 
 func (w *Worker) processMessage(ctx context.Context, event events.Event) error {
-	_, err := meta(event)
+	meta, err := meta(event)
 	if err != nil {
 		return e.Wrap("can't process message", err)
 	}
 
-	w.logger.Info().Msg(fmt.Sprintf("try process event %+v", event))
+	w.logger.Info().Msg(fmt.Sprintf("try process message event %+v", event))
 	//if err := p.doCmd(event.Text, meta.ChatID, meta.Username); err != nil {
 	//	return e.Wrap("can't process message", err)
 	//}
 
-	return nil
+	return w.tgClient.SendMessage(ctx, telegram.OutgoingMessage{ChatId: meta.ChatID, Text: "обработали ваше сообщение"})
+}
+
+func (w *Worker) processCallback(ctx context.Context, event events.Event) error {
+	meta, err := meta(event)
+	if err != nil {
+		return e.Wrap("can't process message", err)
+	}
+
+	w.logger.Info().Msg(fmt.Sprintf("try process callback event %+v", event))
+	return w.tgClient.AnswerCallbackQuery(ctx, telegram.OutgoingCallbackMessage{CallbackQueryId: meta.CallbackInfo.ID, Text: lib.Pointer("response on callback query"), ShowAlert: lib.Pointer(true)})
 }
 
 func meta(event events.Event) (Meta, error) {
@@ -107,9 +118,11 @@ func event(upd telegram.Update) events.Event {
 	}
 
 	if updType == events.Callback {
-		fmt.Printf("пришел колбэк")
 		res.Meta = Meta{
-			CallbackID: lib.Pointer(upd.CallbackQuery.ID),
+			CallbackInfo: &CallbackInfo{
+				ID:   upd.CallbackQuery.ID,
+				Data: upd.CallbackQuery.Data,
+			},
 		}
 	}
 

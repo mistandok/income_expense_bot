@@ -20,8 +20,24 @@ func (m *OutgoingMessage) AsUrlValues() (*url.Values, error) {
 			return nil, e.Wrap("can't marshal ReplyMarkup", err)
 		}
 		q.Add("reply_markup", string(marchaled))
+	case nil:
 	default:
 		return nil, errors.New("undefined interface for ReplyMarkup")
+	}
+
+	return &q, nil
+}
+
+func (m *OutgoingCallbackMessage) AsUrlValues() (*url.Values, error) {
+	q := make(url.Values)
+	q.Add("callback_query_id", m.CallbackQueryId)
+
+	if m.Text != nil {
+		q.Add("text", *m.Text)
+	}
+
+	if m.ShowAlert != nil {
+		q.Add("show_alert", strconv.FormatBool(*m.ShowAlert))
 	}
 
 	return &q, nil

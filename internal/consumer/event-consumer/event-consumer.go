@@ -8,14 +8,22 @@ import (
 	"time"
 )
 
+type EventFetcher interface {
+	Fetch(ctx context.Context, limit int) ([]events.Event, error)
+}
+
+type EventProcessor interface {
+	Process(ctx context.Context, e events.Event) error
+}
+
 type Consumer struct {
-	fetcher   events.Fetcher
-	processor events.Processor
+	fetcher   EventFetcher
+	processor EventProcessor
 	batchSize int
 	logger    *zerolog.Logger
 }
 
-func New(logger *zerolog.Logger, fetcher events.Fetcher, processor events.Processor, batchSize int) Consumer {
+func New(logger *zerolog.Logger, fetcher EventFetcher, processor EventProcessor, batchSize int) Consumer {
 	return Consumer{
 		fetcher:   fetcher,
 		processor: processor,

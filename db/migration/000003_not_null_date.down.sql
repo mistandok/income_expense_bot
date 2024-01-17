@@ -1,0 +1,2 @@
+ALTER TABLE user_money_movement
+DROP CONSTRAINT date_not_null;

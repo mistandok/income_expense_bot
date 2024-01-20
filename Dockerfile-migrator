@@ -1,0 +1,22 @@
+FROM ubuntu:bionic
+
+WORKDIR opt/app/
+
+RUN apt-get update && \
+    apt-get install -y apt-transport-https ca-certificates curl gnupg-agent && \
+    apt-get install wget
+
+RUN wget http://github.com/golang-migrate/migrate/releases/latest/download/migrate.linux-arm64.deb
+RUN dpkg -i migrate.linux-arm64.deb
+
+RUN  apt-get update \
+     && apt-get -y install libpq-dev gcc \
+     && apt-get install acl \
+     && apt install -y netcat
+
+COPY ./db/migration/* ./db/migration/
+COPY start-migrator.sh start-migrator.sh
+
+RUN chmod u+x ./start-migrator.sh
+
+ENTRYPOINT ["./start-migrator.sh"]

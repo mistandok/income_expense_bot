@@ -1,2 +1,0 @@
-ALTER TABLE user_money_movement
-DROP CONSTRAINT amount_negative;

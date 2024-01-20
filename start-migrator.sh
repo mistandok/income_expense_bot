@@ -17,6 +17,6 @@ wait_database()
 
 wait_database $DB_HOST $DB_PORT $DB_TYPE
 
-migrate -path ./db/migration -database "postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME?sslmode=disable" -verbose up
+migrate -path ./db/migration -database "postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$DB_HOST:$DB_PORT/$POSTGRES_DB?sslmode=disable" -verbose up
 
 echo "migrations for $DB_NAME was finished"

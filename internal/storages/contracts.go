@@ -1,7 +1,7 @@
 package storages
 
 type CategoryStorage interface {
-	GetCategoryByName(name string) (Category, error)
-	DeleteCategoryByNameForUser(userID string, name string) error
-	CreateCategory(name string) error
+	DeleteCategoryByNameAndTypeForUser(userName string, name string, moneyMovementType MoneyMovementType) error
+	CreateCategoryForUserByType(userName string, name string, moneyMovementType MoneyMovementType) error
+	GetCategoriesForUserByTYpe(userName string, monetMovementType MoneyMovementType) ([]Category, error)
 }
